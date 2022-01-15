@@ -17,13 +17,13 @@ object PathServer:
     val port = if(System.getenv("PORT") != null) System.getenv("PORT").toInt else 8080
     println(s"running on port $port")
     val server = java.net.ServerSocket(port)
-  
+
     while true do
       val socket = server.accept()
       handleConnection(socket)
-  
+
   end main
-  
+
   def httpResponse(json: JsonObject) =
     s"""HTTP/1.1 200 OK
        |Date: ${new Date}
@@ -33,9 +33,9 @@ object PathServer:
        |
        |${json}
        |\r\n""".stripMargin
-  
+
   def failed(msg: JsonValue) = Json.obj("failed" -> msg)
-  
+
   // connect up the titles using WikiRacer
   def findPath(titles: Seq[String]) : Try[List[String]] =
     Try {
@@ -47,17 +47,18 @@ object PathServer:
         case (fullPath, nextSegment) => fullPath ++ nextSegment.tail
       }
     }
-  
+
   def timer = Future { Thread.sleep(3.minutes.toMillis); failed("timeout") }
-  
+
   def handleConnection(socket: Socket) =
     val in = BufferedReader(InputStreamReader(socket.getInputStream))
     val out = PrintWriter(socket.getOutputStream)
-  
+
     val input = LazyList.continually(in.readLine())
       .filter(_ != null)
       .takeWhile(_.length != 0)
-  
+
+    println(input)
     val titles =
       input.find(_ startsWith "GET ") flatMap { getReq =>
         println("client says: " + getReq)
@@ -72,26 +73,26 @@ object PathServer:
         case Some(ts) => Success(ts)
         case None => Failure(new RuntimeException("malformed request"))
       }
-  
-  
+
+
     val attemptFindPath = Future {
       titles flatMap findPath match
         case Success(path) => Json.obj("path" -> path)
         case Failure(e) => failed(e.getMessage)
     }
-  
+
     val jsonResponse = Future firstCompletedOf Seq(timer, attemptFindPath)
-  
+
     jsonResponse onComplete { fTry =>
       val json = fTry match
         case Success(msg) => msg
         case Failure(e) => e.printStackTrace(); failed("Something went wrong")
-  
+
       println(s"returning $json")
-  
+
       out.write(httpResponse(json))
       out.flush()
-  
+
       in.close()
       out.close()
       socket.close()
