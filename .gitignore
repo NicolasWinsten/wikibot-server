@@ -1,5 +1,5 @@
 # Project exclude paths
 /project/project/target/
 /project/target/
-/target/
+/project/boot
 /target/scala-3.1.0/classes/
