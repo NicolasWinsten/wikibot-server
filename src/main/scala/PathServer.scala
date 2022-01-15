@@ -58,7 +58,7 @@ object PathServer:
       .filter(_ != null)
       .takeWhile(_.length != 0)
 
-    println(input)
+    input foreach println
     val titles =
       input.find(_ startsWith "GET ") flatMap { getReq =>
         println("client says: " + getReq)
